@@ -6,9 +6,9 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 
 **Preprocessed data** folder contains post-exclusion preference and naturalness ratings with image scores given by each participant extracted 
        
-       *Image score for Likert and sliding scale methods:* numerical rating given to each image
+*Image score for Likert and sliding scale methods:* numerical rating given to each image
        
-       *Image score for pairwise and FIRE methods:* binary rating indicating that each image was either selected or unselected
+*Image score for pairwise and FIRE methods:* binary rating indicating that each image was either selected or unselected
         
 **Reliability subsets** folder contains average split half reliability, means, and standard deviations calculated with increasing subsets of participants (N ∈ {100, 110, 120, … 300, 310, 320}) calculated over 10,000 iterations
 
