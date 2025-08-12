@@ -37,10 +37,10 @@ rel_pair_pref <- read.csv(".../reliability_subsets/rel_sub_pair_pref_time_10000_
 rel_fire_pref <- read.csv(".../reliability_subsets/rel_sub_fire_pref_time_10000_new.csv", na.strings=c("","NA"))
 
 #naturalness
-rel_likert_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_likert_nat_time_10000_new.csv", na.strings=c("","NA"))
-rel_slider_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_slider_nat_time_10000_new.csv", na.strings=c("","NA"))
-rel_pair_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_pair_nat_time_10000_new.csv", na.strings=c("","NA"))
-rel_fire_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_fire_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_likert_nat <- read.csv(".../reliability_subsets/rel_sub_likert_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_slider_nat <- read.csv(".../reliability_subsets/rel_sub_slider_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_pair_nat <- read.csv(.../reliability_subsets/rel_sub_pair_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_fire_nat <- read.csv(.../reliability_subsets/rel_sub_fire_nat_time_10000_new.csv", na.strings=c("","NA"))
 ```
 
 ###plot reliability at different subsets of participants 
