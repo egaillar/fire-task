@@ -1,2 +1,2 @@
-# fire-task
-Data and analysis scripts
+# Fast Image Rating Experiment (FIRE)
+Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in Less Time with the Fast Image Rating Experiment" by [Elizabeth P. Gaillard](https://github.com/egaillar)\*, [Nakwon Rim](https://nwrim.github.io)\*, [Kyoung Whan Choe](https://kywch.github.io), [Kimberly L. Meidenbauer](https://kim-meidenbauer.github.io/), and [Marc G. Berman](https://voices.uchicago.edu/bermanlab/) (* denotes equal contribution).
