@@ -18,8 +18,8 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 
 **R_script_clean** folder contains the following three analysis scripts
 
-*FIRE_full_clean.Rmd:* preprocessing and primary analyses to be run on raw preference or naturalness .csvs (in **raw_data** folder). Includes figure creation for rating method efficiency analysis
+*FIRE_full_clean.Rmd:* preprocessing and primary analyses to be run on raw preference or naturalness .csvs (in raw_data folder). Includes figure creation for rating method efficiency analysis
 
-*FIRE_reliability_figures.Rmd:* figure creation for rating method reliability analysis. To be run on preference and naturalness .csvs in **reliability_subsets** folder 
+*FIRE_reliability_figures.Rmd:* figure creation for rating method reliability analysis. To be run on preference and naturalness .csvs in reliability_subsets folder 
 
-*FIRE_validity_figures.Rmd:* figure creation and secondary analyses for rating method validity analysis. To be run on preference and naturalness .csvs in **preprocessed_data** folder
+*FIRE_validity_figures.Rmd:* figure creation and secondary analyses for rating method validity analysis. To be run on preference and naturalness .csvs in preprocessed_data folder
