@@ -5,7 +5,7 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 **raw_data** folder contains raw preference and naturalness ratings by rating method (Likert scale, sliding scale, pairwise comparison, or Fast Image Rating Experiment (FIRE))
 
 
-**preprocessed_data** folder contains post-exclusion preference and naturalness ratings with image scores given by each participant extracted 
+**preprocessed_data** folder contains post-exclusion preference and naturalness ratings with image scores given by each participant extracted. Files were preprocessed both with and without attention check trials and saved as individual .csvs 
        
 *Image score for Likert and sliding scale methods:* numerical rating given to each image
        
