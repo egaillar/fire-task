@@ -1,0 +1,519 @@
+---
+title: "FIRE paper validity analysis with figures"
+author: "Elizabeth Gaillard"
+date: "2025-06-17"
+output: html_document
+
+Script pertains to the 2025 paper, "Reliable and Valid Rating Data in Less Time with the Fast Image Rating Experiment" by Elizabeth P. Gaillard*, Nakwon Rim*, Kimberly L. Meidenbauer, Kyoung Whan Choe, and Marc G. Berman 
+---
+
+#load packages
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(plyr)
+library(reshape2)
+library(splitstackshape)
+library(naniar)
+library(ggplot2)
+library(ggcorrplot)
+library(GGally)
+library(stringr)
+library(patchwork)
+library(gridExtra)
+library(grid) 
+library(cowplot)
+library(ggpubr)
+library(emmeans)
+```
+
+#read files
+```{r}
+#preference
+parsed_likert_pref_final <- read.csv(".../preprocessed_data/likert_pref_preproc.csv", na.strings=c("","NA"))
+parsed_slider_pref_final <- read.csv(".../preprocessed_data/slider_pref_preproc.csv", na.strings=c("","NA"))
+parsed_pair_pref_final <- read.csv(".../preprocessed_data/pair_pref_preproc.csv", na.strings=c("","NA"))
+parsed_fire_pref_final <- read.csv(".../preprocessed_data/fire_pref_preproc.csv", na.strings=c("","NA"))
+
+#naturalness
+parsed_likert_nat_final <- read.csv("/preprocessed_data/likert_nat_preproc.csv", na.strings=c("","NA"))
+parsed_slider_nat_final <- read.csv("/preprocessed_data/slider_nat_preproc.csv", na.strings=c("","NA"))
+parsed_pair_nat_final <- read.csv("/preprocessed_data/pair_nat_preproc.csv", na.strings=c("","NA"))
+parsed_fire_nat_final <- read.csv("/preprocessed_data/fire_nat_preproc.csv", na.strings=c("","NA"))
+```
+
+#HYPOTHESIS: correlation between methods
+##correlate ratings collected via each method
+```{r}
+#average over participants for preference
+likert_pref_avg <- parsed_likert_pref_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_pref_likert = mean(response))
+
+slider_pref_avg <- parsed_slider_pref_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_pref_slider = mean(response))
+
+parsed_pair_pref_final$response <- as.numeric(parsed_pair_pref_final$response)
+pair_pref_avg <- parsed_pair_pref_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_pref_pair = mean(response))
+
+parsed_fire_pref_final$response <- as.numeric(parsed_fire_pref_final$response)
+fire_pref_avg <- parsed_fire_pref_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_pref_fire = mean(response))
+
+#join mean preference ratings to shared data frame
+all_pref_avg <- likert_pref_avg %>%
+  left_join(slider_pref_avg, by = "image") %>%
+  left_join(pair_pref_avg, by = "image") %>%
+  left_join(fire_pref_avg, by = "image")
+
+
+#average over participants for naturalness
+likert_nat_avg <- parsed_likert_nat_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_nat_likert = mean(response))
+
+slider_nat_avg <- parsed_slider_nat_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_nat_slider = mean(response))
+
+parsed_pair_nat_final$response <- as.numeric(parsed_pair_nat_final$response)
+pair_nat_avg <- parsed_pair_nat_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_nat_pair = mean(response))
+
+parsed_fire_nat_final$response <- as.numeric(parsed_fire_nat_final$response)
+fire_nat_avg <- parsed_fire_nat_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_nat_fire = mean(response))
+
+#join mean naturalness ratings to shared data frame
+all_nat_avg <- likert_nat_avg %>%
+  left_join(slider_nat_avg, by = "image") %>%
+  left_join(pair_nat_avg, by = "image") %>%
+  left_join(fire_nat_avg, by = "image")
+
+#join preference and naturalness
+corr_all <- all_pref_avg %>%
+  left_join(all_nat_avg, by = "image")
+```
+
+##correlations within rating criterion
+###scatterplots
+```{r}
+#likert
+p1 <- ggplot(corr_all, aes(x = mean_pref_likert, y = mean_nat_likert)) +
+  geom_point(color = '#16707B', size = 4, alpha = 0.6) +
+  geom_smooth(method = "lm", color = "black", se = FALSE, size = 1.75) +
+  labs(x = "Mean Preference (Likert)", y = "Mean Naturalness (Likert)") +
+  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black", size = 0.3),
+        axis.text = element_text(size = 14),  
+        axis.title = element_text(size = 18))
+#slider
+p2 <- ggplot(corr_all, aes(x = mean_pref_slider, y = mean_nat_slider)) +
+  geom_point(color = '#043143', size = 4, alpha = 0.6) +
+  geom_smooth(method = "lm", color = "black", se = FALSE, size = 1.75) +
+  labs(x = "Mean Preference (Slider)", y = "Mean Naturalness (Slider)") +
+  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black", size = 0.3),
+        axis.text = element_text(size = 14),  
+        axis.title = element_text(size = 18))
+#pairwise
+p3 <- ggplot(corr_all, aes(x = mean_pref_pair, y = mean_nat_pair)) +
+  geom_point(color = '#ED5C1A', size = 4, alpha = 0.6) +
+  geom_smooth(method = "lm", color = "black", se = FALSE, size = 1.75) +
+  labs(x = "Mean Preference (Pairwise)", y = "Mean Naturalness (Pairwise)") +
+  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black", size = 0.3),
+        axis.text = element_text(size = 14),  
+        axis.title = element_text(size = 18))
+#fire
+p4 <- ggplot(corr_all, aes(x = mean_pref_fire, y = mean_nat_fire)) +
+  geom_point(color = '#FFDA94', size = 4, alpha = 0.6) +
+  geom_smooth(method = "lm", color = "black", se = FALSE, size = 1.75) +
+  labs(x = "Mean Preference (FIRE)", y = "Mean Naturalness (FIRE)") +
+  scale_y_continuous(limits = c(0, NA), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        axis.line = element_line(color = "black", size = 0.3),
+        axis.text = element_text(size = 14),  
+        axis.title = element_text(size = 18))
+
+#create figure
+#arrange plots into single figure
+combined_plot <- (p1 + theme(plot.margin = margin(r = 20)) |  
+                  p2 + theme(plot.margin = margin(l = 20))) /  
+                 (p3 + theme(plot.margin = margin(r = 20)) |  
+                  p4 + theme(plot.margin = margin(l = 20))) +  
+                 plot_layout(guides = "collect", widths = c(1, 0.05, 1)) 
+#add white background and plot labels
+final_plot <- ggdraw() +  
+  draw_plot(combined_plot, x = 0.02, y = 0.05, width = 0.96, height = 0.9) + 
+  draw_plot_label(c("A", "B", "C", "D"),  
+                  x = c(0.02, 0.50, 0.02, 0.50),
+                  y = c(0.95, 0.95, 0.50, 0.50),  
+                  size = 24, fontface = "bold")
+
+print(final_plot)
+
+#save plot
+ggsave("nat_pref_corr_by_method.png",  
+       plot = final_plot, width = 18, height = 12,
+       units = "in", dpi = 300, bg = "white")
+```
+
+###matrices
+```{r}
+#preference 
+#correlation matrix
+corrvars_pref <- subset(corr_all, 
+                        select=c("mean_pref_likert", "mean_pref_slider", "mean_pref_pair", "mean_pref_fire"))
+custom_labels_pref <- c("Likert (Pref)", "Slider (Pref)", "Pairwise (Pref)", "FIRE (Pref)")
+plot_pref <- ggpairs(corrvars_pref,
+                     columnLabels = custom_labels_pref, 
+                     progress = FALSE,  
+                     switch = "both", 
+                     upper = list(continuous = function(data, mapping, ...) {
+                       ggally_cor(data, mapping, size = 10, color = "black")
+                     }),  
+                     lower = list(continuous = function(data, mapping, ...) {
+                       ggplot(data, mapping) +
+                         geom_point(color = '#8aa79f', alpha = 0.6) +  
+                         geom_smooth(method = NA, color = "black", se = FALSE, size = 1.5) +
+                         theme_minimal(base_size = 16) + 
+                         theme(panel.grid = element_blank(), 
+                               axis.line = element_line(color = "black", size = 0.3))
+                     }),
+                     diag = list(continuous = wrap("densityDiag", fill = '#8aa79f', alpha = 0.4)) ) +
+                    theme(strip.text = element_text(size = 23))
+ 
+#naturalness
+#correlation matrix
+corrvars_nat <- subset(corr_all, 
+                       select=c("mean_nat_likert", "mean_nat_slider", "mean_nat_pair", "mean_nat_fire"))
+custom_labels_nat <- c("Likert (Nat)", "Slider (Nat)", "Pairwise (Nat)", "FIRE (Nat)")
+plot_nat <- ggpairs(corrvars_nat,
+                     columnLabels = custom_labels_nat, 
+                     progress = FALSE,  
+                     switch = "both", 
+                     upper = list(continuous = function(data, mapping, ...) {
+                       ggally_cor(data, mapping, size = 10, color = "black")  # Removes "Corr"
+                     }),   
+                     lower = list(continuous = function(data, mapping, ...) {
+                       ggplot(data, mapping) +
+                         geom_point(color = '#8ba370', alpha = 0.6) +  
+                         geom_smooth(method = NA, color = "black", se = FALSE, size = 1.5) +
+                         theme_minimal(base_size = 16) + 
+                         theme(panel.grid = element_blank(), 
+                               axis.line = element_line(color = "black", size = 0.3))
+                     }),
+                     diag = list(continuous = wrap("densityDiag", fill = '#8ba370', alpha = 0.4))) +
+                    theme(strip.text = element_text(size = 23))
+
+#ensure uniform theme
+plot_pref <- plot_pref + 
+  theme(axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+plot_nat <- plot_nat + 
+  theme(axis.text = element_text(size = 14), 
+        axis.title = element_text(size = 16))
+
+#make spacer
+blank_space <- ggplot() + theme_void()
+grob_blank <- ggplotGrob(blank_space)
+
+#convert ggpairs plots into gtable objects
+grob_pref <- GGally::ggmatrix_gtable(plot_pref)
+grob_nat <- GGally::ggmatrix_gtable(plot_nat)
+
+#create background
+white_bg <- ggdraw() + theme(plot.background = element_rect(fill = "white", color = NA))
+
+#arrange plots on white background
+combined_plot <- grid.arrange(grob_pref, grob_blank, grob_nat,
+                              ncol = 3,
+                              widths = c(1, 0.1, 1))
+
+padded_plot <- ggdraw() +
+  draw_plot(combined_plot, x = 0.05, y = 0.00, width = 0.9, height = 0.75)
+
+#add panel labels
+final_plot <- padded_plot +
+  draw_plot_label(c("A", "B"),
+                  x = c(0.02, 0.50),
+                  y = c(0.8, 0.8),
+                  size = 34, fontface = "bold")
+
+print(final_plot)
+
+#save labelled plot
+ggsave("correlation_plots_labeled.png", 
+      plot = final_plot, 
+       width = 25, height = 16, units = "in", dpi = 300, bg = "white")
+```
+##correlation with increasing subsamples of participants
+###define function to correlate subsamples with full sample
+```{r}
+n_subset_correlation <- function(data, df_w_mean, n_participants, col_name) {
+  corr_values <- numeric(10000)
+   for (i in 1:10000) {
+     sampled_participants <- sample(unique(data$participant_id), n_participants)
+     sample_data <- dplyr::filter(data, participant_id %in% sampled_participants)
+    avg_rating <- sample_data %>% 
+      dplyr::group_by(image) %>% 
+      dplyr::summarise(mean_rating = mean(response, na.rm = TRUE))
+    merged <- dplyr::inner_join(avg_rating, df_w_mean, by = "image")
+    #correlate mean ratings from sample with mean across all methods
+    corr <- cor(merged$mean_rating, merged[[col_name]], method = "pearson", use = "complete.obs")
+    #spearman-brown correction
+    corr_values[i] <- 2 * corr / (1 + corr)
+   }
+  
+  #return mean and sd of correlations
+  list(mean = mean(corr_values, na.rm = TRUE),
+  sd = sd(corr_values, na.rm = TRUE))
+}
+
+```
+
+###correlations with mean image rating across all methods
+```{r}
+n_values <- seq(10, 320, by = 10)
+
+#preference
+#likert
+corr_results_likert_pref <- data.frame(N = integer(), mean_corr_likert = double(), sd_corr_likert = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_likert_pref_final, corr_all, n, "mean_pref_likert")
+  corr_results_likert_pref <- rbind(corr_results_likert_pref, data.frame(N = n, 
+                                       mean_corr_likert = corr$mean,
+                                       sd_corr_likert = corr$sd))
+}
+
+#slider
+corr_results_slider_pref <- data.frame(N = integer(), mean_corr_slider = double(), sd_corr_slider = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_slider_pref_final, corr_all, n, "mean_pref_slider")
+  corr_results_slider_pref <- rbind(corr_results_slider_pref, data.frame(N = n, 
+                                       mean_corr_slider = corr$mean,
+                                       sd_corr_slider = corr$sd))
+}
+#pair
+corr_results_pair_pref <- data.frame(N = integer(), mean_corr_pair = double(), sd_corr_pair = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_pair_pref_final, corr_all, n, "mean_pref_pair")
+  corr_results_pair_pref <- rbind(corr_results_pair_pref, data.frame(N = n, 
+                                       mean_corr_pair = corr$mean,
+                                       sd_corr_pair = corr$sd))
+}
+#fire
+corr_results_fire_pref <- data.frame(N = integer(), mean_corr_fire = double(), sd_corr_fire = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_fire_pref_final, corr_all, n, "mean_pref_fire")
+  corr_results_fire_pref <- rbind(corr_results_fire_pref, data.frame(N = n, 
+                                       mean_corr_fire = corr$mean,
+                                       sd_corr_fire = corr$sd))
+}
+
+#naturalness
+#likert
+corr_results_likert_nat <- data.frame(N = integer(), mean_corr_likert = double(), sd_corr_likert = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_likert_nat_final, corr_all, n, "mean_nat_likert")
+  corr_results_likert_nat <- rbind(corr_results_likert_nat, data.frame(N = n, 
+                                       mean_corr_likert = corr$mean,
+                                       sd_corr_likert = corr$sd))
+}
+#slider
+corr_results_slider_nat <- data.frame(N = integer(), mean_corr_slider = double(), sd_corr_slider = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_slider_nat_final, corr_all, n, "mean_nat_slider")
+  corr_results_slider_nat <- rbind(corr_results_slider_nat, data.frame(N = n, 
+                                       mean_corr_slider = corr$mean,
+                                       sd_corr_slider = corr$sd))
+}
+#pair
+corr_results_pair_nat <- data.frame(N = integer(), mean_corr_pair = double(), sd_corr_pair = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_pair_nat_final, corr_all, n, "mean_nat_pair")
+  corr_results_pair_nat <- rbind(corr_results_pair_nat, data.frame(N = n, 
+                                       mean_corr_pair = corr$mean,
+                                       sd_corr_pair = corr$sd))
+}
+#fire
+corr_results_fire_nat <- data.frame(N = integer(), mean_corr_fire = double(), sd_corr_fire = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_fire_nat_final, corr_all, n, "mean_nat_fire")
+  corr_results_fire_nat <- rbind(corr_results_fire_nat, data.frame(N = n, 
+                                       mean_corr_fire = corr$mean,
+                                       sd_corr_fire = corr$sd))
+}
+```
+
+###plot with increasing sample size
+```{r}
+#define plot theme
+larger_text_theme <- theme(
+  axis.text = element_text(size = 16),
+  axis.title = element_text(size = 18),
+  plot.tag = element_text(size = 22, face = "bold")
+)
+
+#create plots
+#preference
+plot_pref <- ggplot() +
+  #likert
+  geom_line(data = corr_results_likert_pref, 
+            aes(x = N, y = mean_corr_likert), 
+            color = "#15616d", size = 1.3) + 
+  geom_errorbar(data = corr_results_likert_pref, 
+            aes(x = N, ymin = mean_corr_likert - sd_corr_likert, ymax = mean_corr_likert + sd_corr_likert), 
+            width = 3, size = 0.7, color = "black") + 
+  geom_point(data = corr_results_likert_pref, 
+            aes(x = N, y = mean_corr_likert), 
+            color = "black", fill = "#15616d", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = corr_results_slider_pref, 
+            aes(x = N, y = mean_corr_slider), 
+            color = "#001524", size = 1.3) +
+  geom_errorbar(data = corr_results_slider_pref, 
+            aes(x = N, ymin = mean_corr_slider - sd_corr_slider, ymax = mean_corr_slider + sd_corr_slider), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_slider_pref, 
+            aes(x = N, y = mean_corr_slider), 
+            color = "black", fill = "#001524", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = corr_results_pair_pref, 
+            aes(x = N, y = mean_corr_pair), 
+            color = "#ff7d00", size = 1.3) +
+  geom_errorbar(data = corr_results_pair_pref, 
+            aes(x = N, ymin = mean_corr_pair - sd_corr_pair, ymax = mean_corr_pair + sd_corr_pair), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_pair_pref, 
+            aes(x = N, y = mean_corr_pair), 
+            color = "black", fill = "#ff7d00", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = corr_results_fire_pref, 
+            aes(x = N, y = mean_corr_fire), 
+            color = "#ffecd1", size = 1.3) +
+  geom_errorbar(data = corr_results_fire_pref, 
+            aes(x = N, ymin = mean_corr_fire - sd_corr_fire, ymax = mean_corr_fire + sd_corr_fire), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_fire_pref, 
+            aes(x = N, y = mean_corr_fire), 
+            color = "black", fill = "#ffecd1", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+
+  labs(title = "Preference", x = "Sample Size (N)", y = "Correlation with Full Rating Sample") +
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+    theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+
+#naturalness
+plot_nat <- ggplot() +
+  #likert
+  geom_line(data = corr_results_likert_nat, 
+            aes(x = N, y = mean_corr_likert), 
+            color = "#177e89", size = 1.3) +
+  geom_errorbar(data = corr_results_likert_nat, 
+            aes(x = N, ymin = mean_corr_likert - sd_corr_likert, ymax = mean_corr_likert + sd_corr_likert), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_likert_nat, 
+            aes(x = N, y = mean_corr_likert), 
+            color = "black", fill = "#177e89", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = corr_results_slider_nat, 
+            aes(x = N, y = mean_corr_slider), 
+            color = "#084c61", size = 1.3) +
+  geom_errorbar(data = corr_results_slider_nat, 
+            aes(x = N, ymin = mean_corr_slider - sd_corr_slider, ymax = mean_corr_slider + sd_corr_slider), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_slider_nat, 
+             aes(x = N, y = mean_corr_slider), 
+             color = "black", fill = "#084c61", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = corr_results_pair_nat, 
+            aes(x = N, y = mean_corr_pair), 
+            color = "#db3a34", size = 1.3) +
+  geom_errorbar(data = corr_results_pair_nat, 
+            aes(x = N, ymin = mean_corr_pair - sd_corr_pair, ymax = mean_corr_pair + sd_corr_pair), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_pair_nat, 
+            aes(x = N, y = mean_corr_pair), 
+            color = "black", fill = "#db3a34", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = corr_results_fire_nat, 
+            aes(x = N, y = mean_corr_fire), 
+            color = "#ffc857", size = 1.3) +
+  geom_errorbar(data = corr_results_fire_nat, 
+            aes(x = N, ymin = mean_corr_fire - sd_corr_fire, ymax = mean_corr_fire + sd_corr_fire), 
+            width = 3, size = 0.7, color = "black") +
+  geom_point(data = corr_results_fire_nat, 
+            aes(x = N, y = mean_corr_fire), 
+            color = "black", fill = "#ffc857", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+
+  labs(title = "Naturalness", x = "Sample Size (N)", y = "Correlation with Full Rating Sample") +
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+    theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+  
+
+#combine plots
+two_panel_plot <- (plot_pref / plot_nat) + 
+  plot_annotation(tag_levels = 'A')
+
+print(two_panel_plot)
+
+#print
+ggsave("correlations_with_mean.png", plot = two_panel_plot, width = 10, height = 12, dpi = 300)
+```
+##correlations between rating criteria
+###matrices
+```{r}
+#create correlation matrix across naturalness and preference
+corrvars <-subset(corr_all, 
+                  select=c("mean_pref_likert", "mean_nat_likert", "mean_pref_slider", "mean_nat_slider", "mean_pref_pair", "mean_nat_pair", "mean_pref_fire", "mean_nat_fire"))
+
+#define matrix labels
+custom_labels <- c("Likert (Pref)", "Likert (Nat)", "Slider (Pref)", "Slider (Nat)", "Pairwise (Pref)", "Pairwise (Nat)", "FIRE (Pref)", "FIRE (Nat)")
+
+ggpairs(corrvars,
+        columnLabels = custom_labels, 
+        progress = FALSE,  
+        switch = "both", 
+        upper = list(continuous = wrap("cor", size = 4, color = "black")),  
+        lower = list(continuous = function(data, mapping, ...) {
+          ggplot(data, mapping) +
+            geom_point(color = '#8ba588', alpha = 0.6) +  
+            geom_smooth(method = "lm", formula = y ~ poly(x, 2), color = "black", se = FALSE) +
+            theme_minimal(base_size = 16) + 
+            theme(panel.grid = element_blank(), 
+                  axis.line = element_line(color = "black", size = 0.3))
+        }),
+        diag = list(continuous = wrap("densityDiag", fill = '#8ba588', alpha = 0.4))
+) +
+  theme_minimal(base_size = 11) + 
+  theme(panel.grid = element_blank())
+```

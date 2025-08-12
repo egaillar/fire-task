@@ -1,0 +1,404 @@
+---
+title: "FIRE paper reliability analysis with figures"
+author: "Elizabeth Gaillard"
+date: "2025-06-12"
+output: html_document
+
+Script pertains to the 2025 paper, "Reliable and Valid Rating Data in Less Time with the Fast Image Rating Experiment" by Elizabeth P. Gaillard*, Nakwon Rim*, Kimberly L. Meidenbauer, Kyoung Whan Choe, and Marc G. Berman 
+---
+
+#load packages
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(plyr)
+library(reshape2)
+library(splitstackshape)
+library(naniar)
+library(ggplot2)
+library(ggcorrplot)
+library(GGally)
+library(stringr)
+library(patchwork)
+library(gridExtra)
+library(grid) 
+library(cowplot)
+library(ggpubr)
+library(emmeans)
+```
+
+#read files
+```{r}
+#preference
+rel_likert_pref <- read.csv(".../reliability_subsets/rel_sub_likert_pref_time_10000_new.csv", na.strings=c("","NA"))
+rel_slider_pref <- read.csv(".../reliability_subsets/rel_sub_slider_pref_time_10000_new.csv", na.strings=c("","NA"))
+rel_pair_pref <- read.csv(".../reliability_subsets/rel_sub_pair_pref_time_10000_new.csv", na.strings=c("","NA"))
+rel_fire_pref <- read.csv(".../reliability_subsets/rel_sub_fire_pref_time_10000_new.csv", na.strings=c("","NA"))
+
+#naturalness
+rel_likert_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_likert_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_slider_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_slider_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_pair_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_pair_nat_time_10000_new.csv", na.strings=c("","NA"))
+rel_fire_nat <- read.csv("/Users/EPG/Desktop/ENL/methods_comparison/R_csv_output/reliability_w_increasing_subsets/time/rel_sub_fire_nat_time_10000_new.csv", na.strings=c("","NA"))
+```
+
+###plot reliability at different subsets of participants 
+```{r}
+#define plot theme
+larger_text_theme <- theme(
+  axis.text = element_text(size = 16),
+  axis.title = element_text(size = 18),
+  plot.tag = element_text(size = 22, face = "bold")
+)
+
+#create plots
+#preference
+plot_pref <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_pref, 
+            aes(x = N, y = mean_rel_likert), 
+            color = "#15616d", size = 1.3) +  
+  geom_errorbar(data = rel_likert_pref, 
+                aes(x = N, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+                width = 3, size = 0.7, color = "black") +  
+  geom_point(data = rel_likert_pref, 
+             aes(x = N, y = mean_rel_likert), 
+             color = "black", fill = "#15616d", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_pref, 
+            aes(x = N, y = mean_rel_slider), 
+            color = "#001524", size = 1.3) +
+  geom_errorbar(data = rel_slider_pref, 
+              aes(x = N, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_pref, 
+           aes(x = N, y = mean_rel_slider), 
+           color = "black", fill = "#001524", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_pref, 
+          aes(x = N, y = mean_rel_pair), 
+          color = "#ff7d00", size = 1.3) +
+  geom_errorbar(data = rel_pair_pref, 
+              aes(x = N, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_pref, 
+           aes(x = N, y = mean_rel_pair), 
+           color = "black", fill = "#ff7d00", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_pref, 
+          aes(x = N, y = mean_rel_fire), 
+          color = "#ffecd1", size = 1.3) +
+  geom_errorbar(data = rel_fire_pref, 
+              aes(x = N, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_pref, 
+           aes(x = N, y = mean_rel_fire), 
+           color = "black", fill = "#ffecd1", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Preference", x = "Sample Size (N)", y = "Mean Reliability") +
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+  theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#naturalness
+plot_nat <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_nat, 
+          aes(x = N, y = mean_rel_likert), 
+          color = "#177e89", size = 1.3) +
+  geom_errorbar(data = rel_likert_nat, 
+              aes(x = N, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_likert_nat, 
+           aes(x = N, y = mean_rel_likert), 
+           color = "black", fill = "#177e89", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_nat, 
+          aes(x = N, y = mean_rel_slider), 
+          color = "#084c61", size = 1.3) +
+  geom_errorbar(data = rel_slider_nat, 
+              aes(x = N, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_nat, 
+           aes(x = N, y = mean_rel_slider), 
+           color = "black", fill = "#084c61", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_nat, 
+          aes(x = N, y = mean_rel_pair), 
+          color = "#db3a34", size = 1.3) +
+  geom_errorbar(data = rel_pair_nat, 
+              aes(x = N, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_nat, 
+           aes(x = N, y = mean_rel_pair), 
+           color = "black", fill = "#db3a34", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_nat, 
+          aes(x = N, y = mean_rel_fire), 
+          color = "#ffc857", size = 1.3) +
+  geom_errorbar(data = rel_fire_nat, 
+              aes(x = N, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_nat, 
+           aes(x = N, y = mean_rel_fire), 
+           color = "black", fill = "#ffc857", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Naturalness",x = "Sample Size (N)", y = "Mean Reliability") + 
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+    theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#combine plots
+two_panel_plot <- (plot_pref / plot_nat) + 
+  plot_annotation(tag_levels = 'A')
+
+#display
+two_panel_plot
+
+#print
+#ggsave("reliabilty_part_subsets.png", plot = two_panel_plot, width = 10, height = 12, dpi = 300)
+```
+
+```{r}
+#create plots
+#preference
+plot_pref <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_pref, 
+            aes(x = n_trials, y = mean_rel_likert), 
+            color = "#15616d", size = 1.3) +  
+  geom_errorbar(data = rel_likert_pref, 
+                aes(x = n_trials, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+                width = 3, size = 0.7, color = "black") +  
+  geom_point(data = rel_likert_pref, 
+             aes(x = n_trials, y = mean_rel_likert), 
+             color = "black", fill = "#15616d", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_pref, 
+            aes(x = n_trials, y = mean_rel_slider), 
+            color = "#001524", size = 1.3) +
+  geom_errorbar(data = rel_slider_pref, 
+              aes(x = n_trials, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_pref, 
+           aes(x = n_trials, y = mean_rel_slider), 
+           color = "black", fill = "#001524", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_pref, 
+          aes(x = n_trials, y = mean_rel_pair), 
+          color = "#ff7d00", size = 1.3) +
+  geom_errorbar(data = rel_pair_pref, 
+              aes(x = n_trials, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_pref, 
+           aes(x = n_trials, y = mean_rel_pair), 
+           color = "black", fill = "#ff7d00", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_pref, 
+          aes(x = n_trials, y = mean_rel_fire), 
+          color = "#ffecd1", size = 1.3) +
+  geom_errorbar(data = rel_fire_pref, 
+              aes(x = n_trials, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_pref, 
+           aes(x = n_trials, y = mean_rel_fire), 
+           color = "black", fill = "#ffecd1", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Preference", x = "Number of Trials", y = "Mean Reliability") +
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+  theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#naturalness
+plot_nat <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_nat, 
+          aes(x = n_trials, y = mean_rel_likert), 
+          color = "#177e89", size = 1.3) +
+  geom_errorbar(data = rel_likert_nat, 
+              aes(x = n_trials, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_likert_nat, 
+           aes(x = n_trials, y = mean_rel_likert), 
+           color = "black", fill = "#177e89", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_nat, 
+          aes(x = n_trials, y = mean_rel_slider), 
+          color = "#084c61", size = 1.3) +
+  geom_errorbar(data = rel_slider_nat, 
+              aes(x = n_trials, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_nat, 
+           aes(x = n_trials, y = mean_rel_slider), 
+           color = "black", fill = "#084c61", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_nat, 
+          aes(x = n_trials, y = mean_rel_pair), 
+          color = "#db3a34", size = 1.3) +
+  geom_errorbar(data = rel_pair_nat, 
+              aes(x = n_trials, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_nat, 
+           aes(x = n_trials, y = mean_rel_pair), 
+           color = "black", fill = "#db3a34", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_nat, 
+          aes(x = n_trials, y = mean_rel_fire), 
+          color = "#ffc857", size = 1.3) +
+  geom_errorbar(data = rel_fire_nat, 
+              aes(x = n_trials, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_nat, 
+           aes(x = n_trials, y = mean_rel_fire), 
+           color = "black", fill = "#ffc857", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Naturalness",x = "Number of Trials", y = "Mean Reliability") + 
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+    theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#combine plots
+two_panel_plot <- (plot_pref / plot_nat) + 
+  plot_annotation(tag_levels = 'A')
+
+#display
+two_panel_plot
+
+#print
+#ggsave("reliabilty_trial_subsets_10000.png", plot = two_panel_plot, width = 10, height = 12, dpi = 300)
+```
+
+```{r}
+#create plots
+#preference
+plot_pref <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_pref, 
+            aes(x = time, y = mean_rel_likert), 
+            color = "#15616d", size = 1.3) +  
+  geom_errorbar(data = rel_likert_pref, 
+                aes(x = n_trials, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+                width = 3, size = 0.7, color = "black") +  
+  geom_point(data = rel_likert_pref, 
+             aes(x = time, y = mean_rel_likert), 
+             color = "black", fill = "#15616d", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_pref, 
+            aes(x = time, y = mean_rel_slider), 
+            color = "#001524", size = 1.3) +
+  geom_errorbar(data = rel_slider_pref, 
+              aes(x = time, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_pref, 
+           aes(x = time, y = mean_rel_slider), 
+           color = "black", fill = "#001524", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_pref, 
+          aes(x = time, y = mean_rel_pair), 
+          color = "#ff7d00", size = 1.3) +
+  geom_errorbar(data = rel_pair_pref, 
+              aes(x = time, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_pref, 
+           aes(x = time, y = mean_rel_pair), 
+           color = "black", fill = "#ff7d00", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_pref, 
+          aes(x = time, y = mean_rel_fire), 
+          color = "#ffecd1", size = 1.3) +
+  geom_errorbar(data = rel_fire_pref, 
+              aes(x = time, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_pref, 
+           aes(x = time, y = mean_rel_fire), 
+           color = "black", fill = "#ffecd1", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Preference", x = "Time (min)", y = "Mean Reliability") +
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+  theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#naturalness
+plot_nat <- ggplot() +
+  #likert
+  geom_line(data = rel_likert_nat, 
+          aes(x = time, y = mean_rel_likert), 
+          color = "#177e89", size = 1.3) +
+  geom_errorbar(data = rel_likert_nat, 
+              aes(x = time, ymin = mean_rel_likert - sd_rel_likert, ymax = mean_rel_likert + sd_rel_likert), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_likert_nat, 
+           aes(x = time, y = mean_rel_likert), 
+           color = "black", fill = "#177e89", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #slider
+  geom_line(data = rel_slider_nat, 
+          aes(x = time, y = mean_rel_slider), 
+          color = "#084c61", size = 1.3) +
+  geom_errorbar(data = rel_slider_nat, 
+              aes(x = time, ymin = mean_rel_slider - sd_rel_slider, ymax = mean_rel_slider + sd_rel_slider), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_slider_nat, 
+           aes(x = time, y = mean_rel_slider), 
+           color = "black", fill = "#084c61", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #pairwise
+  geom_line(data = rel_pair_nat, 
+          aes(x = time, y = mean_rel_pair), 
+          color = "#db3a34", size = 1.3) +
+  geom_errorbar(data = rel_pair_nat, 
+              aes(x = time, ymin = mean_rel_pair - sd_rel_pair, ymax = mean_rel_pair + sd_rel_pair), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_pair_nat, 
+           aes(x = time, y = mean_rel_pair), 
+           color = "black", fill = "#db3a34", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  #fire
+  geom_line(data = rel_fire_nat, 
+          aes(x = time, y = mean_rel_fire), 
+          color = "#ffc857", size = 1.3) +
+  geom_errorbar(data = rel_fire_nat, 
+              aes(x = time, ymin = mean_rel_fire - sd_rel_fire, ymax = mean_rel_fire + sd_rel_fire), 
+              width = 3, size = 0.7, color = "black") +
+  geom_point(data = rel_fire_nat, 
+           aes(x = time, y = mean_rel_fire), 
+           color = "black", fill = "#ffc857", size = 4, shape = 21, stroke = 1, alpha = 0.7) +
+  labs(title = "Naturalness",x = "Time (min)", y = "Mean Reliability") + 
+  theme_classic() + larger_text_theme + coord_cartesian(clip = "off") + scale_y_continuous(limits = c(.3, 1)) +
+    theme(plot.title = 
+          element_text(hjust = 0.5,    
+                       face = "bold", 
+                       size = 18),
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 30),
+        axis.line.x = element_line(),
+        axis.line.y = element_line())
+
+#combine plots
+two_panel_plot <- (plot_pref / plot_nat) + 
+  plot_annotation(tag_levels = 'A')
+
+#display
+two_panel_plot
+
+#print
+#ggsave("reliabilty_time_subsets_10000.png", plot = two_panel_plot, width = 10, height = 12, dpi = 300)
+```
+

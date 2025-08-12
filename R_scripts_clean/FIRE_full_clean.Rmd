@@ -1,0 +1,860 @@
+---
+title: "FIRE paper full analysis script"
+author: "Elizabeth Gaillard"
+date: "2025-08-11"
+output: html_document
+
+Full analysis script for the 2025 paper "Reliable and Valid Rating Data in Less Time with the Fast Image Rating Experiment" by Elizabeth P. Gaillard*, Nakwon Rim*, Kimberly L. Meidenbauer, Kyoung Whan Choe, and Marc G. Berman 
+---
+
+#load packages
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(plyr)
+library(reshape2)
+library(splitstackshape)
+library(naniar)
+library(ggplot2)
+library(ggcorrplot)
+library(GGally)
+library(stringr)
+library(patchwork)
+library(gridExtra)
+library(grid) 
+library(cowplot)
+library(ggpubr)
+library(emmeans)
+library(lme4)
+```
+
+#read files
+To run, load in either preference or naturalness data
+```{r}
+#preference
+likert <- read.csv(".../raw_data/likert_filtered_pref.csv", na.strings=c("","NA"))
+slider <- read.csv(".../raw_data/slider_filtered_pref.csv", na.strings=c("","NA"))
+pair <- read.csv(".../raw_data/pairwise_filtered_pref.csv", na.strings=c("","NA"))
+  pair <- pair %>% filter((X !=  "314")) 
+fire <- read.csv(".../raw_data/fire_filtered_pref.csv", na.strings=c("","NA"))
+
+
+#naturalness
+# likert <- read.csv(".../raw_data/likert_filtered_nat.csv", na.strings=c("","NA"))
+# slider <- read.csv(".../raw_data/slider_filtered_nat.csv", na.strings=c("","NA"))
+# pair <- read.csv(".../raw_data/pairwise_filtered_nat.csv", na.strings=c("","NA"))
+# fire <- read.csv(".../raw_data/final_data/fire_filtered_nat.csv", na.strings=c("","NA"))
+```
+
+#PREPROCESSING
+##define functions to parse string 
+```{r}
+parse_ratings <- function(data, column_with_strings) {
+  
+  full_parsed <- data.frame()
+  #iterate over participants
+  for (i in 1:nrow(data)) {
+    input_string <- data[[column_with_strings]][i]
+    formatted_string <- gsub(";", "\n", input_string)
+    formatted_string <- gsub(" ", ",", formatted_string)
+    result_df <- read.csv(text = formatted_string, stringsAsFactors = FALSE, colClasses = c(click = "character"))
+    
+    #add participant id
+    result_df$participant_id <- data$ID[i]
+    full_parsed <- bind_rows(full_parsed, result_df)
+  }
+  
+  return(full_parsed)
+}
+```
+
+##parse results string for each dataset
+```{r}
+suppressWarnings({
+  parsed_likert <- parse_ratings(likert, "image_rating_results")
+  parsed_slider <- parse_ratings(slider, "image_rating_results")
+  parsed_pair   <- parse_ratings(pair, "image_rating_results")
+  parsed_fire   <- parse_ratings(fire, "image_rating_results")
+})
+```
+
+##filter out those who failed attention check
+```{r}
+#likert
+parsed_likert <- parsed_likert %>%
+  group_by(participant_id) %>%
+  filter(sum(attn_fail == 1) < 6) %>%
+  ungroup()
+
+#if running naturalness analyses, use this instead of the above
+
+#parsed_likert <- parsed_likert %>%
+ # group_by(participant_id) %>%
+ # filter(sum(attn_fail == 1) < 6) %>%
+ # filter(!participant_id %in%  #remove extra 6 participants
+          # c("5d0e6b201b7ef6001a6346fc", 
+          #   "6361d5442ff8275a7ab33ed1", 
+          #   "66761366ef6f2c01681b6512", 
+          #   "667f9c4f544c78eff18e2af4", 
+          #   "663a5db9ced6c4bf9bd77d3e",
+          #   "659b47ca7fa14c73800c971f")) %>%
+#  ungroup()
+
+#slider
+parsed_slider <- parsed_slider %>%
+  group_by(participant_id) %>%
+  filter(sum(attn_fail == 1) < 6) %>%
+  ungroup()
+
+#pairwise
+parsed_pair <- parsed_pair %>%
+  group_by(participant_id) %>%
+  filter(sum(attn_fail == 1) < 3) %>%
+  ungroup()
+
+#fire
+parsed_fire <- parsed_fire %>%
+  group_by(participant_id) %>%
+  filter(sum(attn_fail == 1) < 1) %>%
+  ungroup()
+
+#check N for each dataset
+likert_n <- length(unique(parsed_likert$participant_id))
+slider_n <- length(unique(parsed_slider$participant_id))
+pair_n <- length(unique(parsed_pair$participant_id))
+fire_n <- length(unique(parsed_fire$participant_id))
+```
+
+##split click columns
+```{r}
+split_clicks <- function(data, i) { 
+  click_split <- do.call(rbind, strsplit(as.character(data$click), ""))
+  colnames(click_split) <- paste0("click_", 1:i)
+  split_df <- cbind(data, click_split)
+  
+  return(split_df)
+}
+
+split_fire <- split_clicks(parsed_fire, 12)
+split_pair <- split_clicks(parsed_pair, 2)
+```
+
+##reformat pair
+```{r}
+image_cols <- split_pair %>%
+  dplyr::select(exp_stage,image11,image12,participant_id)
+image_cols$index <- 1:nrow(image_cols)
+
+click_cols <- split_pair %>%
+  dplyr::select(exp_stage,click_1,click_2,participant_id)
+click_cols$index <- 1:nrow(click_cols)
+  
+parsed_pair_final <- data.frame()
+for (i in 1:nrow(image_cols)) {
+  for (j in 2:3){
+    image_val <- image_cols[i,j]
+    click_val <- click_cols[i,j]
+    new_row <- data.frame(participant_id = image_cols$participant_id[i],
+                           exp_stage = image_cols$exp_stage[i], 
+                           image = image_val,
+                           position = j-1,
+                           response = click_val,
+                           stringsAsFactors = FALSE)
+    parsed_pair_final <- rbind(parsed_pair_final, new_row)
+  }
+} 
+
+```
+
+##reformat fire
+```{r}
+image_cols <- split_fire %>%
+  dplyr::select(exp_stage,image11:image34,participant_id)
+image_cols$index <- 1:nrow(image_cols)
+
+click_cols <- split_fire %>%
+  dplyr::select(exp_stage,click_1:click_12,participant_id)
+click_cols$index <- 1:nrow(click_cols)
+  
+parsed_fire_final <- data.frame()
+for (i in 1:nrow(image_cols)) {
+  for (j in 2:13){
+    image_val <- image_cols[i,j]
+    click_val <- click_cols[i,j]
+    new_row <- data.frame(participant_id = image_cols$participant_id[i],
+                           exp_stage = image_cols$exp_stage[i], 
+                           image = image_val,
+                           position = j-1,
+                           response = click_val,
+                           stringsAsFactors = FALSE)
+    parsed_fire_final <- rbind(parsed_fire_final, new_row)
+  }
+}
+```
+
+##remove attention check images
+```{r}
+parsed_likert_final <- parsed_likert %>%
+  filter(!str_starts(image, "attn"))
+parsed_slider_final <- parsed_slider %>%
+  filter(!str_starts(image, "attn"))
+parsed_pair_final <- parsed_pair_final %>%
+  filter(!str_starts(image, "attn"))
+parsed_fire_final <- parsed_fire_final %>%
+  filter(!str_starts(image, "attn"))
+```
+
+#HYPOTHESIS 1: TIME
+#A. PER TRIAL
+##define function to calculate mean, sd
+```{r}
+calculate_mean_sd <- function(..., method_names = c("Likert", "Slider", "Pair", "Fire")) {
+  dfs <- list(...)
+  
+  #calc stats
+  stats <- lapply(dfs, function(df) {
+    mean_rt <- mean(df$rt, na.rm = TRUE)
+    sd_rt <- sd(df$rt, na.rm = TRUE)
+    c(Mean = mean_rt, SD = sd_rt)
+  })
+  
+  #combine to single data frame 
+  results <- data.frame(
+    Method = method_names,
+    Mean = sapply(stats, `[[`, "Mean"),
+    SD = sapply(stats, `[[`, "SD")
+  )
+  
+  return(results)
+}
+```
+
+##average time per trial with attention checks
+```{r}
+#with attention checks
+avg_time_per_trial <- calculate_mean_sd(parsed_likert, parsed_slider, parsed_pair, parsed_fire)
+
+avg_time_per_trial <- avg_time_per_trial %>%
+  mutate(n = c(43520, 43520, 21760, 2880)) %>%
+  mutate(SE = SD / sqrt(n)) %>%
+  mutate(
+    Mean = Mean / 1000,
+    SE = SE / 1000
+  )
+```
+
+##define function to remove attention check trials and remove
+```{r}
+remove_attn_trials <- function(df, image_cols) {
+  df %>%
+    filter(!if_any(all_of(image_cols), ~ str_starts(.x, "attn")))
+}
+
+#remove attention checks
+likert_time_no_attn <- remove_attn_trials(parsed_likert, "image")
+slider_time_no_attn <- remove_attn_trials(parsed_slider, "image")
+pair_time_no_attn <- remove_attn_trials(parsed_pair, c("image11", "image12"))
+fire_time_no_attn <- remove_attn_trials(parsed_fire, 
+  c("image11", "image12", "image13", "image14",
+    "image21", "image22", "image23", "image24",
+    "image31", "image32", "image33", "image34"))
+
+```
+
+##average time per trial without attention checks
+```{r}
+avg_time_per_trial_no_attn <- calculate_mean_sd(likert_time_no_attn, slider_time_no_attn, pair_time_no_attn, fire_time_no_attn)
+
+avg_time_per_trial_no_attn <- avg_time_per_trial_no_attn %>%
+  mutate(n = c(33920, 33920, 16960, 2240)) %>%
+  mutate(SE = SD / sqrt(n)) %>%
+  mutate(
+    Mean = Mean / 1000,
+    SE = SE / 1000
+  )
+```
+
+##significance testing
+###mixed-effects models
+####with attention checks
+```{r}
+parsed_likert$rating_method <- "Likert"
+likert_time <- parsed_likert %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+parsed_slider$rating_method <- "Slider"
+slider_time <- parsed_slider %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+parsed_pair$rating_method <- "Pair"
+pair_time <- parsed_pair %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+parsed_fire$rating_method <- "FIRE"
+fire_time <- parsed_fire %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+time_data <- rbind(
+  likert_time, slider_time, pair_time, fire_time
+)
+
+#mixed-effects model
+model <- lmer(rt ~ rating_method + (1 | participant_id), data = time_data)
+emm <- emmeans(model, ~ rating_method)
+pairs(emm)
+```
+
+####without attention checks
+```{r}
+likert_time_no_attn$rating_method <- "Likert"
+likert_time_no_attn <- likert_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+slider_time_no_attn$rating_method <- "Slider"
+slider_time_no_attn <- slider_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+pair_time_no_attn$rating_method <- "Pair"
+pair_time_no_attn <- pair_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+fire_time_no_attn$rating_method <- "FIRE"
+fire_time_no_attn <- fire_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+time_data_no_attn <- rbind(
+  likert_time_no_attn, slider_time_no_attn, pair_time_no_attn, fire_time_no_attn
+)
+
+#mixed-effects model
+model_no_attn <- lmer(rt ~ rating_method + (1 | participant_id), data = time_data_no_attn)
+
+emm <- emmeans(model_no_attn, ~ rating_method)
+pairs(emm)
+```
+##plotting
+###with attention checks
+```{r}
+boxplot(parsed_likert$rt/1000, parsed_slider$rt/1000, parsed_pair$rt/1000, parsed_fire$rt/1000,
+  names = c("Likert", "Slider", "Pair", "FIRE"),
+  xlab = "Method",
+  ylab = "Avg. Time Per Trial (sec)",
+  col = c("#15616d", "#001524", "#ff7d00", "#ffecd1"),
+  border = "black", 
+  notch = TRUE, 
+  outline = FALSE,
+  ylim = c(0, 40)
+)
+```
+###without attention checks
+```{r}
+boxplot(likert_time_no_attn$rt/1000, slider_time_no_attn$rt/1000, pair_time_no_attn$rt/1000, fire_time_no_attn$rt/1000,
+  names = c("Likert", "Slider", "Pair", "FIRE"),
+  xlab = "Method",
+  ylab = "Avg. Time Per Trial (sec)",
+  col = c("#15616d", "#001524", "#ff7d00", "#ffecd1"),
+  border = "black", 
+  notch = TRUE, 
+  outline = FALSE,
+  ylim = c(0,40)
+)
+```
+
+
+#B. PER PARTICIPANT
+##average time per participant
+###with attention checks
+```{r}
+#sum trial times by participant with attention checks
+likert_time <- parsed_likert %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+slider_time <- parsed_slider %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+pair_time <- parsed_pair %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+fire_time <- parsed_fire %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+
+#descriptive stats
+avg_time_per_part <- calculate_mean_sd(likert_time, slider_time, pair_time, fire_time)
+
+avg_time_per_part <- avg_time_per_part %>%
+  mutate(n = c(320, 320, 320, 320)) %>%
+  mutate(SE = SD / sqrt(n)) %>%
+   mutate(
+    Mean = Mean / 60000,
+    SD = SD / 60000
+  )
+```
+
+###without attention checks
+```{r}
+#sum trial times by participant without attention check
+likert_time_no_attn_part <- parsed_likert %>% 
+  filter(!str_starts(image, "attn")) %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+slider_time_no_attn_part <- parsed_slider %>% 
+  filter(!str_starts(image, "attn")) %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+pair_time_no_attn_part <- parsed_pair %>% 
+  filter(!str_starts(image11, "attn") & !str_starts(image12, "attn")) %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+fire_time_no_attn_part <- parsed_fire %>% 
+  filter(!str_starts(image11, "attn") & !str_starts(image12, "attn") & !str_starts(image13, "attn")
+         & !str_starts(image21, "attn") & !str_starts(image22, "attn") & !str_starts(image23, "attn")
+         & !str_starts(image31, "attn") & !str_starts(image32, "attn") & !str_starts(image33, "attn")) %>% 
+  group_by(participant_id) %>%
+  dplyr::summarise(rt = sum(rt))
+
+#descriptive stats
+avg_time_per_part_no_attn <- calculate_mean_sd(likert_time_no_attn, slider_time_no_attn, pair_time_no_attn, fire_time_no_attn)
+
+avg_time_per_part_no_attn <- avg_time_per_part_no_attn %>%
+  mutate(n = c(320, 320, 320, 320)) %>%
+  mutate(SE = SD / sqrt(n)) %>%
+   mutate(
+    Mean = Mean / 60000,
+    SD = SD / 60000
+  )
+```
+
+##significance testing
+###preprocessing
+####with attention checks
+```{r}
+likert_time$rating_method <- "Likert"
+likert_time_part <- likert_time %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+slider_time$rating_method <- "Slider"
+slider_time_part <- slider_time %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+pair_time$rating_method <- "Pair"
+pair_time_part <- pair_time %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+fire_time$rating_method <- "FIRE"
+fire_time_part <- fire_time %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+time_data_part <- rbind(
+  likert_time_part, slider_time_part, pair_time_part, fire_time_part
+)
+
+##convert to minutes
+time_data_part <- time_data_part %>%
+  mutate(rt = rt/60000)
+```
+
+####without attention checks
+```{r}
+likert_time_no_attn$rating_method <- "Likert"
+likert_time_part_no_attn <- likert_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+slider_time_no_attn$rating_method <- "Slider"
+slider_time_part_no_attn <- slider_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+pair_time_no_attn$rating_method <- "Pair"
+pair_time_part_no_attn <- pair_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+fire_time_no_attn$rating_method <- "FIRE"
+fire_time_part_no_attn <- fire_time_no_attn %>%
+  dplyr::select("participant_id", "rt", "rating_method")
+
+time_data_part_no_attn <- rbind(
+  likert_time_part_no_attn, slider_time_part_no_attn, pair_time_part_no_attn, fire_time_part_no_attn
+)
+
+##convert to minutes
+time_data_part_no_attn <- time_data_part_no_attn %>%
+  mutate(rt = rt/60000)
+```
+
+###permutation test 
+```{r}
+permutation_test <- function(data, method1, method2, n_perm = 10000) {
+  
+  #subset ratings from the two chosen methods
+  df_pair <- data %>%
+    filter(rating_method %in% c(method1, method2)) %>%
+    droplevels() #removes unused factor levels
+  
+  #calc empirical absolute difference in means
+  observed_diff <- abs(mean(df_pair$rt[df_pair$rating_method == method1]) -
+                       mean(df_pair$rt[df_pair$rating_method == method2]))
+  
+  #permutations
+  perm_diffs <- replicate(n_perm, {
+    shuffled_labels <- sample(df_pair$rating_method)
+    abs(mean(df_pair$rt[shuffled_labels == method1]) -
+        mean(df_pair$rt[shuffled_labels == method2]))
+  })
+  
+  #p-value
+  p_value <- (sum(perm_diffs >= observed_diff) + 1) / (n_perm + 1)
+  
+  return(list(
+    method1 = method1,
+    method2 = method2,
+    observed_diff = observed_diff,
+    p_value = p_value
+  ))
+}
+```
+
+####with attention checks
+```{r}
+results <- list(
+  likert_slider_part <- permutation_test(time_data_part, "Likert", "Slider"),
+  likert_pair_part <- permutation_test(time_data_part, "Likert", "Pair"),
+  likert_fire_part <- permutation_test(time_data_part, "Likert", "FIRE"),
+  slider_pair_part <- permutation_test(time_data_part, "Slider", "Pair"),
+  slider_fire_part <- permutation_test(time_data_part, "Slider", "FIRE"),
+  pair_fire_part <- permutation_test(time_data_part, "Pair", "FIRE")
+)
+
+
+#get summary
+summary <- do.call(rbind, lapply(results, function(res) {
+  data.frame(
+    method1 = res$method1,
+    method2 = res$method2,
+    observed_diff = res$observed_diff,
+    p_value = res$p_value
+  )
+}))
+```
+
+####without attention checks
+```{r}
+results_no_attn <- list(
+  likert_slider_no_attn_part <- permutation_test(time_data_part_no_attn, "Likert", "Slider"),
+  likert_pair_no_attn_part <- permutation_test(time_data_part_no_attn, "Likert", "Pair"),
+  likert_fire_no_attn_part <- permutation_test(time_data_part_no_attn, "Likert", "FIRE"),
+  slider_pair_no_attn_part <- permutation_test(time_data_part_no_attn, "Slider", "Pair"),
+  slider_fire_no_attn_part <- permutation_test(time_data_part_no_attn, "Slider", "FIRE"),
+  pair_fire_no_attn_part <- permutation_test(time_data_part_no_attn, "Pair", "FIRE")
+)
+
+
+#get summary
+summary_no_attn <- do.call(rbind, lapply(results_no_attn, function(res) {
+  data.frame(
+    method1 = res$method1,
+    method2 = res$method2,
+    observed_diff = res$observed_diff,
+    p_value = res$p_value
+  )
+}))
+```
+
+##plotting
+###with attention checks
+```{r}
+boxplot(likert_time$rt/60000, slider_time$rt/60000, pair_time$rt/60000, fire_time$rt/60000,
+  names = c("Likert", "Slider", "Pair", "FIRE"),
+  xlab = "Method",
+  ylab = "Avg. Time Per Participant (min)",
+  col = c("#15616d", "#001524", "#ff7d00", "#ffecd1"),
+  border = "black", 
+  notch = TRUE, 
+  outline = FALSE,
+  ylim = c(0, 30)
+)
+```
+
+###without attention checks
+```{r}
+boxplot(likert_time_no_attn_part$rt/60000, slider_time_no_attn_part$rt/60000, pair_time_no_attn_part$rt/60000, fire_time_no_attn_part$rt/60000,
+  names = c("Likert", "Slider", "Pair", "FIRE"),
+  main = "Preference",
+  xlab = "Method",
+  ylab = "Avg. Time Per Participant (min)",
+  col = c("#15616d", "#001524", "#ff7d00", "#ffecd1"),
+  border = "black", 
+  notch = TRUE, 
+  outline = FALSE,
+  ylim = c(0, 30)
+)
+```
+
+
+#HYPOTHESIS 2: RELIABILITY
+##define function to calculate reliability with all participants
+```{r}
+split_half_rel_all <- function(data, n_participants) {
+  reliability_results <- numeric(10000)
+  
+  for (i in 1:10000) {
+    sampled_participants <- sample(unique(data$participant_id), n_participants)
+    sample_data <- dplyr::filter(data, participant_id %in% sampled_participants)
+
+    #split by participant
+    pids <- unique(sample_data$participant_id)
+    split_assign <- tibble::tibble(
+      participant_id = pids,
+      split = sample(c(1, 2), length(pids), replace = TRUE)
+    )
+    sample_data <- dplyr::left_join(sample_data, split_assign, by = "participant_id")
+
+    group_1 <- sample_data %>%
+      dplyr::filter(split == 1) %>%
+      dplyr::group_by(image) %>%
+      dplyr::summarise(mean_rating = mean(as.numeric(response), na.rm = TRUE), .groups = "drop")
+    group_2 <- sample_data %>%
+      dplyr::filter(split == 2) %>%
+      dplyr::group_by(image) %>%
+      dplyr::summarise(mean_rating = mean(as.numeric(response), na.rm = TRUE), .groups = "drop")
+
+    merged <- dplyr::inner_join(group_1, group_2, by = "image", suffix = c("_1", "_2"))
+
+    #require at least 2 complete pairs before cor()
+    n_complete <- sum(stats::complete.cases(merged$mean_rating_1, merged$mean_rating_2))
+    if (n_complete >= 2) {
+      r <- stats::cor(merged$mean_rating_1, merged$mean_rating_2,
+                      method = "pearson", use = "complete.obs")
+      reliability_results[i] <- 2 * r / (1 + r)
+    } else {
+      reliability_results[i] <- NA_real_
+    }
+  }
+
+  list(
+    mean = mean(reliability_results, na.rm = TRUE),
+    sd = stats::sd(reliability_results, na.rm = TRUE),
+    results = reliability_results
+  )
+}
+```
+
+##define function to calculate reliability at differing number of participants
+```{r}
+n_subset_reliability <- function(data, n_participants) {
+  reliability_results <- numeric(10000)
+  
+  for (i in 1:10000) {
+    sampled_participants <- sample(unique(data$participant_id), n_participants)
+    sample_data <- dplyr::filter(data, participant_id %in% sampled_participants)
+    
+    split <- split(sample_data, sample(rep(1:2, length.out = nrow(sample_data))))
+    
+    group_1 <- split[[1]] %>%
+      dplyr::group_by(image) %>%
+      dplyr::summarise(mean_rating = mean(as.numeric(response), na.rm = TRUE), .groups = "drop")
+    group_2 <- split[[2]] %>%
+      dplyr::group_by(image) %>%
+      dplyr::summarise(mean_rating = mean(as.numeric(response), na.rm = TRUE), .groups = "drop")
+    
+    merged <- dplyr::inner_join(group_1, group_2, by = "image", suffix = c("_1", "_2"))
+    
+    #require ≥ 2 complete pairs before correlating
+    n_complete <- sum(stats::complete.cases(merged$mean_rating_1, merged$mean_rating_2))
+    if (n_complete >= 2) {
+      pearson_corr <- stats::cor(merged$mean_rating_1, merged$mean_rating_2,
+                                 method = "pearson", use = "complete.obs")
+      reliability_results[i] <- 2 * pearson_corr / (1 + pearson_corr)  # Spearman–Brown
+    } else {
+      reliability_results[i] <- NA_real_
+    }
+  }
+  
+  list(
+    mean = mean(reliability_results, na.rm = TRUE),
+    sd   = stats::sd(reliability_results, na.rm = TRUE)
+  )
+}
+```
+
+#A. FULL PARTICIPANT SET
+##split-half reliability
+```{r}
+split_likert <- split_half_rel_all(parsed_likert_final,320)
+split_slider <- split_half_rel_all(parsed_slider_final,320)
+split_pair <- split_half_rel_all(parsed_pair_final,320)
+split_fire <- split_half_rel_all(parsed_fire_final,320)
+
+reliability_likert <- split_likert$results
+reliability_slider <- split_slider$results
+reliability_pair <- split_pair$results
+reliability_fire <- split_fire$results
+```
+
+##plot
+```{r}
+boxplot(reliability_likert, reliability_slider, reliability_pair, reliability_fire,
+  names = c("Likert", "Slider", "Pair", "FIRE"),
+  xlab = "Method",
+  ylab = "Correlation Coefficient",
+  col = c("#15616d", "#001524", "#ff7d00", "#ffecd1"),
+  border = "black", 
+  notch = TRUE, 
+  outline = FALSE
+)
+```
+
+# B. SUBSETS
+##calculate reliability with samples of 50, 20, ...160 participants 
+```{r}
+n_values <- seq(100, 320, by = 10)
+
+#likert
+rel_likert <- data.frame(N = integer(), mean_rel_likert = double(), sd_rel_likert = double())
+for (n in n_values) {
+  rel <- n_subset_reliability(parsed_likert_final, n)
+  rel_likert <- rbind(rel_likert, data.frame(N = n, 
+                                       mean_rel_likert = rel$mean,
+                                       sd_rel_likert = rel$sd))
+}
+#slider
+rel_slider <- data.frame(N = integer(), mean_rel_slider = double(), sd_rel_slider = double())
+for (n in n_values) {
+  rel <- n_subset_reliability(parsed_slider_final, n)
+  rel_slider <- rbind(rel_slider, data.frame(N = n, 
+                                       mean_rel_slider = rel$mean,
+                                       sd_rel_slider = rel$sd))
+}
+#pair
+rel_pair <- data.frame(N = integer(), mean_rel_pair = double(), sd_rel_pair = double())
+for (n in n_values) {
+  rel <- n_subset_reliability(parsed_pair_final, n)
+  rel_pair <- rbind(rel_pair, data.frame(N = n, 
+                                       mean_rel_pair = rel$mean,
+                                       sd_rel_pair = rel$sd))
+}
+#fire
+rel_fire <- data.frame(N = integer(), mean_rel_fire = double(), sd_rel_fire = double())
+for (n in n_values) {
+  rel <- n_subset_reliability(parsed_fire_final, n)
+  rel_fire <- rbind(rel_fire, data.frame(N = n, 
+                                       mean_rel_fire = rel$mean,
+                                       sd_rel_fire = rel$sd))
+}
+```
+
+##reliability by number of trials and by time
+```{r}
+#add column for trial
+rel_likert <- rel_likert %>%
+  mutate(n_trials = N*106)
+rel_slider <- rel_slider %>%
+  mutate(n_trials = N*106)
+rel_pair <- rel_pair %>%
+  mutate(n_trials = N*68)
+rel_fire <- rel_fire %>%
+  mutate(n_trials = N*9)
+
+#add column for time
+rel_likert <- rel_likert %>%
+  mutate(time = n_trials*(avg_time_per_trial_no_attn[1,2]))
+rel_slider <- rel_slider %>%
+  mutate(time = n_trials*(avg_time_per_trial_no_attn[2,2]))
+rel_pair <- rel_pair %>%
+  mutate(time = n_trials*(avg_time_per_trial_no_attn[3,2]))
+rel_fire <- rel_fire %>%
+  mutate(time = n_trials*(avg_time_per_trial[4,2]))
+```
+
+#HYPOTHESIS 3: VALIDITY
+##correlate ratings collected via each method
+```{r}
+#average over participants
+likert_avg <- parsed_likert_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_likert = mean(response))
+
+slider_avg <- parsed_slider_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_slider = mean(response))
+
+parsed_pair_final$response <- as.numeric(parsed_pair_final$response)
+pair_avg <- parsed_pair_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_pair = mean(response))
+
+parsed_fire_final$response <- as.numeric(parsed_fire_final$response)
+fire_avg <- parsed_fire_final %>%
+  group_by(image) %>%
+  dplyr::summarise(mean_fire = mean(response))
+
+#join mean ratings to shared data frame
+all_avg <- likert_avg %>%
+  left_join(slider_avg, by = "image") %>%
+  left_join(pair_avg, by = "image") %>%
+  left_join(fire_avg, by = "image")
+
+```
+
+##correlation with increasing subsamples of participants
+###define function to correlate subsamples with full sample
+```{r}
+n_subset_correlation <- function(data, df_w_mean, n_participants, col_name) {
+  corr_values <- numeric(10000)
+   for (i in 1:10000) {
+     sampled_participants <- sample(unique(data$participant_id), n_participants)
+     sample_data <- dplyr::filter(data, participant_id %in% sampled_participants)
+    avg_rating <- sample_data %>% 
+      dplyr::group_by(image) %>% 
+      dplyr::summarise(mean_rating = mean(response, na.rm = TRUE))
+    merged <- dplyr::inner_join(avg_rating, df_w_mean, by = "image")
+    #correlate mean ratings from sample with mean across all methods
+    corr <- cor(merged$mean_rating, merged[[col_name]], method = "pearson", use = "complete.obs")
+    #spearman-brown correction
+    corr_values[i] <- 2 * corr / (1 + corr)
+   }
+  
+  #return mean and sd of correlations
+  list(mean = mean(corr_values, na.rm = TRUE),
+  sd = sd(corr_values, na.rm = TRUE))
+}
+```
+
+###correlations with mean image rating across all methods
+```{r}
+n_values <- seq(10, 320, by = 10)
+
+#likert
+corr_results_likert <- data.frame(N = integer(), mean_corr_likert = double(), sd_corr_likert = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_likert_final, all_avg, n, "mean_likert")
+  corr_results_likert <- rbind(corr_results_likert, data.frame(N = n, 
+                                       mean_corr_likert = corr$mean,
+                                       sd_corr_likert = corr$sd))
+}
+
+#slider
+corr_results_slider <- data.frame(N = integer(), mean_corr_slider = double(), sd_corr_slider = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_slider_final, all_avg, n, "mean_slider")
+  corr_results_slider <- rbind(corr_results_slider, data.frame(N = n, 
+                                       mean_corr_slider = corr$mean,
+                                       sd_corr_slider = corr$sd))
+}
+#pair
+corr_results_pair <- data.frame(N = integer(), mean_corr_pair = double(), sd_corr_pair = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_pair_final, all_avg, n, "mean_pair")
+  corr_results_pair <- rbind(corr_results_pair, data.frame(N = n, 
+                                       mean_corr_pair = corr$mean,
+                                       sd_corr_pair = corr$sd))
+}
+#fire
+corr_results_fire <- data.frame(N = integer(), mean_corr_fire = double(), sd_corr_fire = double())
+for (n in n_values) {
+  corr <- n_subset_correlation(parsed_fire_final, all_avg, n, "mean_fire")
+  corr_results_fire <- rbind(corr_results_fire, data.frame(N = n, 
+                                       mean_corr_fire = corr$mean,
+                                       sd_corr_fire = corr$sd))
+}
+```
