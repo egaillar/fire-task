@@ -7,16 +7,16 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 
 **preprocessed_data** folder contains post-exclusion preference and naturalness ratings with image scores given by each participant extracted 
        
-+*Image score for Likert and sliding scale methods:* numerical rating given to each image
+*Image score for Likert and sliding scale methods:* numerical rating given to each image
        
-+*Image score for pairwise and FIRE methods:* binary rating indicating that each image was either selected or unselected
+*Image score for pairwise and FIRE methods:* binary rating indicating that each image was either selected or unselected
 
         
 **reliability_subsets** folder contains average split half reliability, means, and standard deviations calculated with increasing subsets of participants (N ∈ {100, 110, 120, … 300, 310, 320}) over 10,000 iterations. There is one .csv for each rating method across both rating criteria (preference and naturalness)
 
 # Analysis Scripts
 
-**R_script_clean** folder contains the following three analysis scripts
+**R_script_clean** folder contains the following three analysis scripts:
 
 *FIRE_full_clean.Rmd:* preprocessing and primary analyses to be run on raw preference or naturalness .csvs (in raw_data folder). Includes figure creation for rating method efficiency analysis
 
