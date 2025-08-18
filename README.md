@@ -16,7 +16,7 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 
 # Analysis Scripts
 
-**R_script_clean** folder contains the following three analysis scripts:
+**R_scripts_clean** folder contains the following three analysis scripts:
 
 *FIRE_full_clean.Rmd:* preprocessing and primary analyses to be run on raw preference or naturalness .csvs (in raw_data folder). Includes figure creation for rating method efficiency analysis
 
