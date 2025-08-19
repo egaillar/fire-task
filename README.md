@@ -54,19 +54,19 @@ Image rating details:
 
 Script encodes preprocessing and all primary analyses to be run on raw preference or naturalness rating data. Preference and naturalness analyses cannot be run simultaneously; instead, run the script twice, once with preference data loaded and once with naturalness data loaded. Includes figure creation for assessment of rating method efficiency.
 
-- data to be analyzed with this script are stored in `"raw_data"` folder in the *Data* component
+- data to be analyzed with this script are stored in `"raw_data"` folder
 
 
 ### "FIRE_validity_figures.Rmd" ###
 
 Script encodes figure creation and secondary analyses for assessment of rating method validity. Run on preprocessed preference and naturalness data. Rating data for both criteria should be loaded at start.
 
-- data to be analyzed with this script are stored in `"preprocessed_data"` folder in the *Data* component
+- data to be analyzed with this script are stored in `"preprocessed_data"` folder
 
 
 ### "FIRE_reliability_figures.Rmd" ###
 
 Script encodes figure creation for assessment of rating method reliability. Run on preference and naturalness reliability calculated with increasing subsets of participants. Reliabilty data for both rating criteria should be loaded at start.
 
-- data to be analyzed with this script are stored in `"reliability_subsets"` folder in the *Data* component
+- data to be analyzed with this script are stored in `"reliability_subsets"` folder
 - Reliability subsets can also be derived from running `FIRE_full_clean.Rmd` on raw data. Using csvs. in `"reliability_subsets"` folder is simply faster. 
