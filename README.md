@@ -3,6 +3,7 @@ Data and analysis scripts for the 2025 paper "Reliable and Valid Rating Data in 
 
 - Correspondence: Elizabeth Gaillard, egaillard@uchicago.edu
 - Last updated: August, 2025
+- Analysis scripts were written by Elizabeth Gaillard, and all analyses were performed in R version 4.2.3
 ---
 This study examined the following rating methods: 
 
@@ -22,6 +23,7 @@ Image rating details:
  - Raw image ratings for **likert** and **slider** methods are recorded as numerical values given to each image
  - Raw image ratings for **pair** and **fire** methods are recorded as binary indicators denoting whether each image was selected
 
+---
 # Data
 ### Raw ###
 
@@ -46,13 +48,25 @@ Image rating details:
 - .csvs are named in the following format: `"rel_sub_[rating method]_[rating criterion]_time_10000_new.csv"`
 
 
-
+---
 # Analysis Scripts
+### "FIRE_full_clean.Rmd" ###
 
-**R_scripts_clean** folder contains the following three analysis scripts:
+Script encodes preprocessing and all primary analyses to be run on raw preference or naturalness rating data. Preference and naturalness analyses cannot be run simultaneously; instead, run the script twice, once with preference data loaded and once with naturalness data loaded. Includes figure creation for assessment of rating method efficiency.
 
-*FIRE_full_clean.Rmd:* preprocessing and primary analyses to be run on raw preference or naturalness .csvs (in raw_data folder). Includes figure creation for rating method efficiency analysis
+- data to be analyzed with this script are stored in `"raw_data"` folder in the *Data* component
 
-*FIRE_reliability_figures.Rmd:* figure creation for rating method reliability analysis. To be run on preference and naturalness .csvs in reliability_subsets folder 
 
-*FIRE_validity_figures.Rmd:* figure creation and secondary analyses for rating method validity analysis. To be run on preference and naturalness .csvs in preprocessed_data folder
+### "FIRE_validity_figures.Rmd" ###
+
+Script encodes figure creation and secondary analyses for assessment of rating method validity. Run on preprocessed preference and naturalness data. Rating data for both criteria should be loaded at start.
+
+- data to be analyzed with this script are stored in `"preprocessed_data"` folder in the *Data* component
+
+
+### "FIRE_reliability_figures.Rmd" ###
+
+Script encodes figure creation for assessment of rating method reliability. Run on preference and naturalness reliability calculated with increasing subsets of participants. Reliabilty data for both rating criteria should be loaded at start.
+
+- data to be analyzed with this script are stored in `"reliability_subsets"` folder in the *Data* component
+- Reliability subsets can also be derived from running `FIRE_full_clean.Rmd` on raw data. Using csvs. in `"reliability_subsets"` folder is simply faster. 
