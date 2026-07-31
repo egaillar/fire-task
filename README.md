@@ -37,19 +37,19 @@ Image rating details:
 
 ### "fire_analyses_preference.Rmd" ###
 
-Script encodes preprocessing and all primary analyses to be run on raw preference data. 
+Preprocessing and all primary analyses to be run on raw preference data. 
 
  - data to be analyzed with this script are stored in `"raw_data"` folder
 
 ### "fire_analyses_naturalness.Rmd" ###
 
-Script encodes preprocessing and all primary analyses to be run on raw naturalness data. 
+Preprocessing and all primary analyses to be run on raw naturalness data. 
 
  - data to be analyzed with this script are stored in `"raw_data"` folder 
 
 ### "fire_data_cleaning.R" ###
 
-Data cleaning script. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalness.Rmd", this script must be stored in the same folder.
+Data cleaning. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalness.Rmd", this script must be stored in the same folder.
 
 ### "fire_helper_utils.R ###
 
