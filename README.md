@@ -27,10 +27,10 @@ Image rating details:
 # Data
 ### Raw ###
 
-"raw_data" folder contains raw preference and naturalness ratings by rating method. Image ratings given by each participant are stored in a vector and must be extracted.
+"raw_data" folder contains preference and naturalness data which were collected from Qualtrics forms distributed via Prolific. As a result, the folder contains a file downloaded from Qualtrics and a file downloaded from Prolific for each of the rating methods and criterion. 
 
- - .csvs are named in the following format: `"[rating
-   method]_filtered_[rating criterion].csv"`
+ - .csvs are named in the following format: `"[p/q]_[rating method]_[rating criterion].csv"`
+ - all .csvs are required for analyses
 
 ---
 # Analysis Scripts
@@ -39,21 +39,21 @@ Image rating details:
 
 Script encodes preprocessing and all primary analyses to be run on raw preference data. 
 
-- data to be analyzed with this script are stored in `"raw_data"` folder
+ - data to be analyzed with this script are stored in `"raw_data"` folder
 
 ### "fire_analyses_naturalness.Rmd" ###
 
 Script encodes preprocessing and all primary analyses to be run on raw naturalness data. 
 
-- data to be analyzed with this script are stored in `"raw_data"` folder 
+ - data to be analyzed with this script are stored in `"raw_data"` folder 
 
 ### "fire_data_cleaning.R" ###
 
-Data cleaning script. This script must be stored in the same folder as the .Rmds.
+Data cleaning script. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalness.Rmd", this script must be stored in the same folder.
 
 ### "fire_helper_utils.R ###
 
-Helper functions. This script must be stored in the same folder as the .Rmds.
+Helper functions. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalness.Rmd", this script must be stored in the same folder.
 
 
 
