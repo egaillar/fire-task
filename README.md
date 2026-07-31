@@ -45,8 +45,7 @@ Script encodes preprocessing and all primary analyses to be run on raw preferenc
 
 Script encodes preprocessing and all primary analyses to be run on raw naturalness data. 
 
-- data to be analyzed with this script are stored in `"raw_data"` folder
-- 
+- data to be analyzed with this script are stored in `"raw_data"` folder 
 
 ### "fire_data_cleaning.R" ###
 
