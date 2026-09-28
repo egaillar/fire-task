@@ -1,0 +1,15 @@
+
+Empirical calibration (bimodal Gaussian mixture):
+  mixing weights:            [0.50032599 0.49967401]
+  component means:           (-1.3077930921154037, 2.3313076688469616)
+  component sds:             (0.9748766974609211, 0.37251428602206405)
+  sigma^2 (global noise):    2.059111   (sigma=1.434960)
+  I (# images):              1104
+  N_obs (# ratings):         33920
+  mean(n_i):                 30.725   min=17  max=49
+
+Parameters for simulate_world(mu_dist='bimodal'):
+  bimodal_weight=0.5003259900678403
+  bimodal_means=(-1.3077930921154037, 2.3313076688469616)
+  bimodal_sds=(0.9748766974609211, 0.37251428602206405)
+  noise_sd=1.4349601846538766

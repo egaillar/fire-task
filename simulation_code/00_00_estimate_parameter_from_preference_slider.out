@@ -1,0 +1,13 @@
+Empirical calibration (unimodal Normal):
+  mu (mean of mu_i):         0.662117
+  var(mu_i):                 0.501307   (sd=0.708031)
+  sigma^2 (global noise):    1.989984   (sigma=1.410668)
+  I (# images):              1104
+  N_obs (# ratings):         33920
+  mean(n_i):                 30.725   min=17  max=46
+
+Parameters for simulate_world(mu_dist='normal'):
+  mu_dist='normal'
+  mu_mean=0.6621166787688665
+  mu_sd=0.7080305928859372
+  noise_sd=1.410667812424766
