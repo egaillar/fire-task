@@ -3,7 +3,7 @@ Data and analysis scripts for the 2026 paper "Reliable and Valid Rating Data in 
 
 - Correspondence: Elizabeth Gaillard, egaillard@uchicago.edu
 - Last updated: July, 2026
-- Analysis scripts were written by Elizabeth Gaillard, and all analyses were performed in R version 4.2.3
+- Analysis scripts were written by Elizabeth Gaillard, and all analyses were performed in R version 4.2.3. Simulations were written and performed by Nakwon Rim.
 ---
 This study examined the following rating methods: 
 
@@ -54,6 +54,7 @@ Data cleaning. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalne
 ### "fire_helper_utils.R ###
 
 Helper functions. To run "fire_analyses_preference.Rmd" or "fire_analyses_naturalness.Rmd", this script must be stored in the same folder.
+
 
 
 
