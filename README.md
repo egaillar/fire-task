@@ -2,7 +2,7 @@
 Data and analysis scripts for the 2026 paper "Reliable and Valid Rating Data in Less Time with the Fast Image Rating Experiment" by [Elizabeth P. Gaillard](https://github.com/egaillar)\*, [Nakwon Rim](https://nwrim.github.io)\*, [Kimberly L. Meidenbauer](https://kim-meidenbauer.github.io/), [Kyoung Whan Choe](https://kywch.github.io), and [Marc G. Berman](https://voices.uchicago.edu/bermanlab/) (* denotes equal contribution).
 
 - Correspondence: Elizabeth Gaillard, egaillard@uchicago.edu
-- Last updated: July, 2026
+- Last updated: September, 2026
 - Analysis scripts were written by Elizabeth Gaillard, and all analyses were performed in R version 4.2.3. Simulations were written and performed by Nakwon Rim.
 ---
 This study examined the following rating methods: 
